@@ -35,7 +35,13 @@ The event structure is this:
 * `WSPS.Range.` `All` means send to server and allow server to send to other clients. `ServerOnly` means, send to server but dont allow sending to other clients. `ClientOnly` means, do not send to server.
 
 ## Example
+### Without server
 ![alt tag](https://acevik.de/img/wsps-jsclient-example3.png)
 ![alt tag](https://acevik.de/img/wsps-jsclient-example2.png)
  
- 
+### With server
+![alt tag](https://acevik.de/img/wsps-jsclient-example4.png)
+![alt tag](https://acevik.de/img/wsps-jsclient-example5.png)
+
+![alt tag](https://acevik.de/img/wsps-jsclient-example6.png)
+![alt tag](https://acevik.de/img/wsps-jsclient-example7.png)

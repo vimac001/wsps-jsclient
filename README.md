@@ -46,4 +46,10 @@ The event structure is this:
 ![alt tag](https://acevik.de/img/wsps-jsclient-example6.png)
 ![alt tag](https://acevik.de/img/wsps-jsclient-example7.png)
 
-#### Server-side libraries cooming soon. (Java tomorow.)
+## Libraries
+### Client-Side
+* JavaScript [wsps-jsclient](https://github.com/vimac001/wsps-jsclient) *(this)*
+
+### Server-Side
+* Java [wsps-jserver](https://github.com/vimac001/wsps-jserver)
+* *Other cooming soon*

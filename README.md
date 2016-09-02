@@ -27,7 +27,7 @@ The event structure is this:
   data : ...,
   sentBy : WSPS.Sender.*,
   sender : Object,
-  range : WSPS.Range.*,
+  range : WSPS.Range.*
 }`
 
 * Data send by publisher, should be string, numeric or object. (Objetcs are sent to server as json string.)

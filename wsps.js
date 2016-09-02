@@ -114,7 +114,7 @@ WSPS.Manager = (new (function(){
 
     var serverSubscribe = function(channel) {
         if(ths.isConnected()) {
-            var msg = 's:' + channel;
+            var msg = 's' + channel;
             sock.send(msg);
         } else {
             console.warn('Channel subscribe for \'' + channel + '\' could not be sent to server.');
@@ -123,7 +123,7 @@ WSPS.Manager = (new (function(){
 
     var serverUnsubscribe = function(channel) {
         if(ths.isConnected()) {
-            var msg = 'u:' + channel;
+            var msg = 'u' + channel;
             sock.send(msg);
         } else {
             console.warn('Channel unsubscribe for \'' + channel + '\' could not be sent to server.');
@@ -140,8 +140,26 @@ WSPS.Manager = (new (function(){
         }
 
         if(ths.isConnected()) {
-            var msg = 'p:' + range.toString() + ':' + channel.length.toString() + ':' + channel + ':' +
-                                            (typeof eventData === 'object' ? JSON.stringify(eventData) : eventData);
+            var data = '';
+            if(typeof eventData === 'string') {
+                data += 's' + eventData;
+            } else if(typeof eventData === 'number') {
+                if(eventData % 1 === 0) {
+                    data += 'i' + eventData;
+                } else {
+                    data += 'f' + eventData;
+                }
+            } else if(typeof eventData === 'object') {
+                if(eventData === null) {
+                    data += 'n';
+                } else {
+                    data += 'j' + JSON.stringify(eventData);
+                }
+            } else {
+                console.warning('Type of event data is invalid. Only string, number and object allowed. Published data was not sent but published.', eventData);
+                return;
+            }
+            var msg = 'p' + range.toString() + ':' + channel.length.toString() + ':' + channel + data;
             sock.send(msg);
         } else {
             console.warn('Publishing data at channel \'' + channel + '\' could not be sent to server.');
@@ -153,19 +171,19 @@ WSPS.Manager = (new (function(){
     var onMessage = function(e) {
         var msg = e.data;
 
-        if(msg.indexOf('p:') === 0) {
-            var i = msg.indexOf(':', 3);
-            var len = parseInt(msg.substring(2, i++));
+        if(msg.indexOf('p') === 0) {
+            var i = msg.indexOf(':', 2);
+            var len = parseInt(msg.substring(1, i++));
             var channel = msg.substr(i, len);
             i += (len + 1);
             var eventData = msg.substr(i);
 
             ths.publish(channel, eventData, this, WSPS.Range.ClientOnly);
-        } else if(msg.indexOf('s:') === 0) {
-            var channel = msg.substr(2);
+        } else if(msg.indexOf('s') === 0) {
+            var channel = msg.substr(1);
             ths.subscribe(channel, ths);
-        } else if(msg.indexOf('u:')) {
-            var channel = msg.substr(2);
+        } else if(msg.indexOf('u')) {
+            var channel = msg.substr(1);
             ths.unsubscribe(channel, ths);
         }
     };
@@ -193,8 +211,26 @@ WSPS.Manager = (new (function(){
         }
 
         if(ths.isConnected()) {
-            var msg = 'p:' + event.range.toString() + ':' + channel.length.toString() + ':' + channel + ':' +
-                (typeof event.data === 'object' ? JSON.stringify(event.data) : event.data.toString());
+            var data = '';
+            if(typeof eventData === 'string') {
+                data += 's' + eventData;
+            } else if(typeof eventData === 'number') {
+                if(eventData % 1 === 0) {
+                    data += 'i' + eventData;
+                } else {
+                    data += 'f' + eventData;
+                }
+            } else if(typeof eventData === 'object') {
+                if(eventData === null) {
+                    data += 'n';
+                } else {
+                    data += 'j' + JSON.stringify(eventData);
+                }
+            } else {
+                console.warning('Type of event data is invalid. Only string, number and object allowed. Published data was not sent but published.', eventData);
+                return;
+            }
+            var msg = 'p' + range.toString() + ':' + channel.length.toString() + ':' + channel + data;
             sock.send(msg);
         } else {
             console.warn('Publishing data at channel \'' + channel + '\' could not be sent to server.');

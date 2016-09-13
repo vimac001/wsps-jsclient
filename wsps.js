@@ -373,7 +373,7 @@ WSPS.Manager = (new (function(){
 			return;
 		}
 		
-        range = range || WSPS.Range.All;
+        range = range || WSPS.Range.ServerOnly;
         if(channel in channels && channels[channel].subscribersAmount() > 0) {
             channels[channel].notify(eventData, sender, range);
         } else {

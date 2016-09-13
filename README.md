@@ -1,10 +1,4 @@
-WebSocket Publish-Subscribe 
-
-Protocol Documentation
-
-Version 1.0
-
-*By Viktor Machnik*
+[WSPS Documentation](https://docs.google.com/document/d/1z65cn5PC74BamNzBEvYo6UwqTKxQEhBByh6a12RDuT8/edit?usp=sharing)
 
 # Index
 

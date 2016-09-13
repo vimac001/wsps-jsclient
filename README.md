@@ -135,6 +135,3 @@ number : is splited into two categories of numbers:
 object : is initiated with the character j for **JSON **followed by the stringified version of the object.
 
 null: is initiated with the character n for null followed by nothing.
-
-[[TOC]]
-

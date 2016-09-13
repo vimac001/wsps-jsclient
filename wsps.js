@@ -4,7 +4,7 @@ WSPS.Range = {
      * Send published data to server and tell the server
      * to publish data to other connected clients.
      */
-    All : 0,
+    All : 2,
 
     /**
      * Send published data to server and tell the server
@@ -15,7 +15,7 @@ WSPS.Range = {
     /**
      * Publish the date only to subscribing objects of this client.
      */
-    ClientOnly : 2
+    ClientOnly : 0
 };
 
 WSPS.Sender = {
@@ -34,7 +34,7 @@ WSPS.Channel = function(name) {
     var notifyMethodName = 'notify';
 
     var subscribers = new Array();
-
+	
     /**
      * Returns the name of this channel object.
      * @return Channel name.
@@ -102,11 +102,65 @@ WSPS.Channel = function(name) {
     };
 };
 
+/**
+ * Makes an array of channel names to a comma separated string with escaped commas in channel names.
+ * @param channel Array of channels.
+ * @return mixed False of the final channel name is invalied or string of channel names.
+ */
+WSPS.Channel.stringify = function(channel) {
+	if(typeof channel === 'object') {
+		var c = null;
+		if('indexOf' in channel) {
+			for(var i = 0; i < channel.length; i++) {
+				var chn = channel[i].replace(',', '\\,');
+				if(c === null) {
+					c = chn;
+				} else {
+					c += ',' + chn;
+				}
+			}
+		} else {
+			for(var i in channel) {
+				var chn = channel[i].replace(',', '\\,');
+				if(c === null) {
+					c = chn;
+				} else {
+					c += ',' + chn;
+				}
+			}
+		}
+		
+		channel = c;
+	}
+	
+	if(typeof channel !== 'string' || channel.length <= 0) {
+		return false;
+	}
+	
+	return channel;
+};
+
+/**
+ * Make a comma separated string of channel names to an array with unescaped commas in channel names. (Reverse of stringify)
+ * @param channel String of channels.
+ * @return mixed False on syntax error else an array with the channel names.
+ */
+WSPS.Channel.parse = function(channel) {
+	channel = channel.split(rxChannelSplit);
+	for(var i = 0; i < channel.length; i++) {
+		channel[i] = channel[i].replace('\\,', ',');
+	}
+	
+	return channel;
+};
+
 WSPS.Manager = (new (function(){
     var ths = this;
     var channels = {};
+	var rxChannelSplit = /(?<!\\),/;
 
     // Networking
+	var wcon = false;
     var sock = null;
     this.isConnected = function() {
         return (sock !== null && sock.readyState === 1);
@@ -114,76 +168,67 @@ WSPS.Manager = (new (function(){
 
     var serverSubscribe = function(channel) {
         if(ths.isConnected()) {
+			channel = WSPS.Channel.stringify(channel);
+			if(!channel) {
+				console.warn('Data published to bad channel!', channel);
+				return;
+			}
+			
             var msg = 's' + channel;
             sock.send(msg);
-        } else {
+        } else if(wcon) {
             console.warn('Channel subscribe for \'' + channel + '\' could not be sent to server.');
         }
     };
 
     var serverUnsubscribe = function(channel) {
         if(ths.isConnected()) {
+			channel = WSPS.Channel.stringify(channel);
+			if(!channel) {
+				console.warn('Data published to bad channel!', channel);
+				return;
+			}
             var msg = 'u' + channel;
             sock.send(msg);
-        } else {
+        } else if(wcon) {
             console.warn('Channel unsubscribe for \'' + channel + '\' could not be sent to server.');
         }
     };
 
-    //@Deprecated
-    var serverPublish = function(channel, eventData, range) {
-        if(range === WSPS.Range.ClientOnly) return;
-
-        if(typeof eventData === 'function') {
-            console.error('Invalid event data type.', eventData);
-            return;
-        }
-
-        if(ths.isConnected()) {
-            var data = '';
-            if(typeof eventData === 'string') {
-                data += 's' + eventData;
-            } else if(typeof eventData === 'number') {
-                if(eventData % 1 === 0) {
-                    data += 'i' + eventData;
-                } else {
-                    data += 'f' + eventData;
-                }
-            } else if(typeof eventData === 'object') {
-                if(eventData === null) {
-                    data += 'n';
-                } else {
-                    data += 'j' + JSON.stringify(eventData);
-                }
-            } else {
-                console.warning('Type of event data is invalid. Only string, number and object allowed. Published data was not sent but published.', eventData);
-                return;
-            }
-            var msg = 'p' + range.toString() + ':' + channel.length.toString() + ':' + channel + data;
-            sock.send(msg);
-        } else {
-            console.warn('Publishing data at channel \'' + channel + '\' could not be sent to server.');
-        }
-    };
-
-    var onOpen = function(e){/* Nothing to do here... */}
+    var onOpen = function(e){ wcon = true; }
 
     var onMessage = function(e) {
         var msg = e.data;
 
         if(msg.indexOf('p') === 0) {
-            var i = msg.indexOf(':', 2);
-            var len = parseInt(msg.substring(1, i++));
-            var channel = msg.substr(i, len);
+			var rng = msg.substring(1, 1);
+            var i = msg.indexOf(':', 3);
+            var len = parseInt(msg.substring(2, i++));
+            var channel = WSPS.Channel.parse(msg.substr(i, len));
             i += (len + 1);
-            var eventData = msg.substr(i);
+            var data = msg.substr(i);
+			
+			switch(data.substr(0, 1)) {
+				case 's':
+					data = data.substr(1);
+					break;
+				case 'i':
+					data = parseInt(data.substr(1));
+					break;
+				case 'f':
+					data = parseFloat(data.substr(1));
+					break;
+				case 'j':
+					data = JSON.parse(data.substr(1));
+					break;
+			}
 
-            ths.publish(channel, eventData, this, WSPS.Range.ClientOnly);
+            ths.publish(channel, data, this, WSPS.Range.ClientOnly);
         } else if(msg.indexOf('s') === 0) {
-            var channel = msg.substr(1);
+            var channel = WSPS.Channel.parse(msg.substr(1));
             ths.subscribe(channel, ths);
         } else if(msg.indexOf('u')) {
-            var channel = msg.substr(1);
+            var channel = WSPS.Channel.parse(msg.substr(1));
             ths.unsubscribe(channel, ths);
         }
     };
@@ -197,9 +242,12 @@ WSPS.Manager = (new (function(){
     };
 
     var initSubscribeAtServer = function(e) {
+		var chans = new Array();
         for(var channel in channels) {
-            serverSubscribe(channel);
+            chans.push(channel);
         }
+		
+		serverSubscribe(chans);
     };
 
     this.notify = function(channel, event) {
@@ -211,14 +259,20 @@ WSPS.Manager = (new (function(){
         }
 
         if(ths.isConnected()) {
+			channel = WSPS.Channel.stringify(channel);
+			if(!channel) {
+				console.warn('Data published to bad channel!', channel);
+				return;
+			}
+			
             var data = '';
             if(typeof eventData === 'string') {
                 data += 's' + eventData;
             } else if(typeof eventData === 'number') {
                 if(eventData % 1 === 0) {
-                    data += 'i' + eventData;
+                    data += 'i' + eventData.toString();
                 } else {
-                    data += 'f' + eventData;
+                    data += 'f' + eventData.toString();
                 }
             } else if(typeof eventData === 'object') {
                 if(eventData === null) {
@@ -230,9 +284,9 @@ WSPS.Manager = (new (function(){
                 console.warning('Type of event data is invalid. Only string, number and object allowed. Published data was not sent but published.', eventData);
                 return;
             }
-            var msg = 'p' + range.toString() + ':' + channel.length.toString() + ':' + channel + data;
+            var msg = 'p' + range.toString() + channel.length.toString() + ':' + channel + data;
             sock.send(msg);
-        } else {
+        } else if(wcon) {
             console.warn('Publishing data at channel \'' + channel + '\' could not be sent to server.');
         }
     };
@@ -265,6 +319,19 @@ WSPS.Manager = (new (function(){
     };
 
     // Publish-Subscribe
+	var foreachChannel = function(channel, callback) {
+		if('indexOf' in channel) {
+			for(var i = 0; i < channel.length; i++) {
+				var chn = channel[i];
+				callback(chn);
+			}
+		} else {
+			for(var i in channel) {
+				var chn = channel[i];
+				callback(chn);
+			}
+		}
+	};
 
     /**
      * Subscribe a channel.
@@ -272,13 +339,22 @@ WSPS.Manager = (new (function(){
      * @param subscriber Subscribing object to notify at.
      */
     this.subscribe = function(channel, subscriber) {
+		if(typeof channel === 'object') {
+			foreachChannel(channel, function(chn){
+				ths.subscribe(chn, subscriber);
+			});
+			
+			return;
+		}
+		
         if(!(channel in channels)) {
             channels[channel] = new WSPS.Channel(channel);
-        }
-
+			serverSubscribe(channel);
+        }else if(channels[channel].subscribersAmount() <= 0) {
+			serverSubscribe(channel);
+		}
+		
         channels[channel].addSubscriber(subscriber);
-
-        serverSubscribe(channel);
     };
 
     /**
@@ -289,14 +365,20 @@ WSPS.Manager = (new (function(){
      * @param range Range how far to send the published data. (WSPS.Range.*)
      */
     this.publish = function(channel, eventData, sender, range) {
+		if(typeof channel === 'object') {
+			foreachChannel(channel, function(chn){
+				ths.publish(chn, eventData, sender, range);
+			});
+			
+			return;
+		}
+		
         range = range || WSPS.Range.All;
         if(channel in channels && channels[channel].subscribersAmount() > 0) {
             channels[channel].notify(eventData, sender, range);
         } else {
             console.warn('Channel \'' + channel + '\' has no subscribers.');
         }
-
-        //serverPublish(channel, eventData, range);
     };
 
     /**
@@ -305,11 +387,21 @@ WSPS.Manager = (new (function(){
      * @param subscriber Subscribed object to identify and unsubscribe.
      */
     this.unsubscribe = function(channel, subscriber) {
+		if(typeof channel === 'object') {
+			foreachChannel(channel, function(chn){
+				ths.unsubscribe(chn, subscriber);
+			});
+			
+			return;
+		}
+		
         if(channel in channels && channels[channel].subscribersAmount() > 0) {
             channels[channel].removeSubscriber(subscriber);
+			
+			if(channels[channel].subscribersAmount() <= 0) {
+				serverUnsubscribe(channel);
+			}
         }
-
-        serverUnsubscribe(channel);
     };
 
 })());

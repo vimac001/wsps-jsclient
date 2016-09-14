@@ -136,9 +136,9 @@ object : is initiated with the character j for **JSON **followed by the stringif
 
 null: is initiated with the character n for null followed by nothing.
 
-´´´php
-Test1
-´´´
-```php
-Test2
+```js
+WSPS.Manager.subscribe('my-channel', this);
+do {
+
+} while(true);
 ```

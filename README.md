@@ -112,7 +112,54 @@ function notify(channel, event) {
 
 ## How to publish data
 ```js
-WSPS.Manager.publish('channel-name', data, this, WSPS.Range.ClientOnly);
+WSPS.Manager.publish('channel-name', data, null, WSPS.Range.ClientOnly); // Or...
+function cls() {
+    var ths = this;
+    
+    this.changeAnyValue = function(newValue) {
+        WSPS.Manager.publish('anyValue.change', newValue, ths);
+    };
+}
+
+var obj = new cls();
+obj.changeAnyValue(42);
 ```
 
-#### Documentation in progress...
+There is no more, that's all.
+
+### *publish* method explained
+```js
+function publish(channel, data[, sender=null[, range=WSPS.Range.ServerOnly]]);
+```
+This metod can be called any time from any point of code and is used to publish data to all subscribers subscribed to the channel.
+
+##### *channel* parameter explained
+All subscribers subscribed to this channel will receive the published data. (Their notify method will be called)
+
+##### *data* parameter explained
+For *data* can be anything passed. Event functions.
+**Important!** Only data of type _string_, _number_ and _object_ can be sent to server. So when you use a range greater than ClientOnly, make shure that your data is of this type. (More about it you can fint in the WSPS Documentation)
+
+##### *sender* parameter explained
+The *sender* is always the object, that published the data. Sometimes there is no object, in that case you can pass a null.
+
+##### *range* parameter explained
+Any time you publish data, you have the choice, how far you want to publish them. By default you publish data always to your client and the server, but not to other clients. This is more secure.
+
+## How to connect to a wsps-server
+```js
+WSPS.Manager.connect('wss://127.0.0.1:1337').then(function() {
+    //Do sth. when connected successfully.
+}, function(err) {
+    //Do sth. when not!
+});
+```
+
+# Links
+### Client APIs
+ + JavaScript [*wsps-jsclient*](https://github.com/vimac001/wsps-jsclient)
+### Server APIs
+ + Java [wsps-jserver](https://github.com/vimac001/wsps-jserver) *in progress*
+ + PHP *in progress*
+ + .NET *in progress*
+ + C++ *in progress*

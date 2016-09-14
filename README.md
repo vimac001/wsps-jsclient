@@ -158,6 +158,7 @@ WSPS.Manager.connect('wss://127.0.0.1:1337').then(function() {
 # Links
 ### Client APIs
  + JavaScript [*wsps-jsclient*](https://github.com/vimac001/wsps-jsclient)
+
 ### Server APIs
  + Java [wsps-jserver](https://github.com/vimac001/wsps-jserver) *in progress*
  + PHP *in progress*

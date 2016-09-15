@@ -146,9 +146,10 @@ WSPS.Channel.stringify = function(channel) {
  * @return mixed False on syntax error else an array with the channel names.
  */
 WSPS.Channel.parse = function(channel) {
-	channel = channel.split(rxChannelSplit);
+	channel = channel.replace(/\\,/g, ':--.--;');
+	channel = channel.split(',');
 	for(var i = 0; i < channel.length; i++) {
-		channel[i] = channel[i].replace('\\,', ',');
+		channel[i] = channel[i].replace(/:--\.--;/g, ',');
 	}
 	
 	return channel;
@@ -157,7 +158,6 @@ WSPS.Channel.parse = function(channel) {
 WSPS.Manager = (new (function(){
     var ths = this;
     var channels = {};
-	var rxChannelSplit = /(?<!\\),/;
 
     // Networking
 	var wcon = false;

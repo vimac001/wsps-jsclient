@@ -1,3 +1,5 @@
+"use strict";
+
 var WSPS = {};
 WSPS.Range = {
     /**
@@ -131,6 +133,8 @@ WSPS.Channel.stringify = function(channel) {
 		}
 		
 		channel = c;
+	} else if(typeof channel === 'string') {
+		channel = channel.replace(',', '\\,');
 	}
 	
 	if(typeof channel !== 'string' || channel.length <= 0) {
@@ -167,6 +171,7 @@ WSPS.Manager = (new (function(){
     };
 
     var serverSubscribe = function(channel) {
+		if(!channel || channel.length <= 0) return;
         if(ths.isConnected()) {
 			channel = WSPS.Channel.stringify(channel);
 			if(!channel) {
@@ -226,10 +231,10 @@ WSPS.Manager = (new (function(){
             ths.publish(channel, data, this, WSPS.Range.ClientOnly);
         } else if(msg.indexOf('s') === 0) {
             var channel = WSPS.Channel.parse(msg.substr(1));
-            ths.subscribe(channel, ths);
+            ths.subscribe(channel, ths, true);
         } else if(msg.indexOf('u')) {
             var channel = WSPS.Channel.parse(msg.substr(1));
-            ths.unsubscribe(channel, ths);
+            ths.unsubscribe(channel, ths, true);
         }
     };
 
@@ -265,6 +270,7 @@ WSPS.Manager = (new (function(){
 				return;
 			}
 			
+			var eventData = event.data;
             var data = '';
             if(typeof eventData === 'string') {
                 data += 's' + eventData;
@@ -284,7 +290,7 @@ WSPS.Manager = (new (function(){
                 console.warning('Type of event data is invalid. Only string, number and object allowed. Published data was not sent but published.', eventData);
                 return;
             }
-            var msg = 'p' + range.toString() + channel.length.toString() + ':' + channel + data;
+            var msg = 'p' + event.range.toString() + channel.length.toString() + ':' + channel + data;
             sock.send(msg);
         } else if(wcon) {
             console.warn('Publishing data at channel \'' + channel + '\' could not be sent to server.');
@@ -338,10 +344,11 @@ WSPS.Manager = (new (function(){
      * @param channel Channel name to subscribe.
      * @param subscriber Subscribing object to notify at.
      */
-    this.subscribe = function(channel, subscriber) {
+    this.subscribe = function(channel, subscriber, sideOnly) {
+		sideOnly = typeof sideOnly === 'undefined' ? false : sideOnly;
 		if(typeof channel === 'object') {
 			foreachChannel(channel, function(chn){
-				ths.subscribe(chn, subscriber);
+				ths.subscribe(chn, subscriber, sideOnly);
 			});
 			
 			return;
@@ -349,9 +356,9 @@ WSPS.Manager = (new (function(){
 		
         if(!(channel in channels)) {
             channels[channel] = new WSPS.Channel(channel);
-			serverSubscribe(channel);
+			if(!sideOnly) serverSubscribe(channel);
         }else if(channels[channel].subscribersAmount() <= 0) {
-			serverSubscribe(channel);
+			if(!sideOnly) serverSubscribe(channel);
 		}
 		
         channels[channel].addSubscriber(subscriber);
@@ -365,6 +372,8 @@ WSPS.Manager = (new (function(){
      * @param range Range how far to send the published data. (WSPS.Range.*)
      */
     this.publish = function(channel, eventData, sender, range) {
+		range = typeof range === 'undefined' ? WSPS.Range.ServerOnly : range;
+		
 		if(typeof channel === 'object') {
 			foreachChannel(channel, function(chn){
 				ths.publish(chn, eventData, sender, range);
@@ -373,7 +382,6 @@ WSPS.Manager = (new (function(){
 			return;
 		}
 		
-        range = range || WSPS.Range.ServerOnly;
         if(channel in channels && channels[channel].subscribersAmount() > 0) {
             channels[channel].notify(eventData, sender, range);
         } else {
@@ -386,10 +394,11 @@ WSPS.Manager = (new (function(){
      * @param channel Channel name to unsubscribe.
      * @param subscriber Subscribed object to identify and unsubscribe.
      */
-    this.unsubscribe = function(channel, subscriber) {
+    this.unsubscribe = function(channel, subscriber, sideOnly) {
+		sideOnly = typeof sideOnly === 'undefined' ? false : sideOnly;
 		if(typeof channel === 'object') {
 			foreachChannel(channel, function(chn){
-				ths.unsubscribe(chn, subscriber);
+				ths.unsubscribe(chn, subscriber, sideOnly);
 			});
 			
 			return;
@@ -399,7 +408,7 @@ WSPS.Manager = (new (function(){
             channels[channel].removeSubscriber(subscriber);
 			
 			if(channels[channel].subscribersAmount() <= 0) {
-				serverUnsubscribe(channel);
+				if(!sideOnly) serverUnsubscribe(channel);
 			}
         }
     };

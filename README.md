@@ -157,10 +157,11 @@ WSPS.Manager.connect('wss://127.0.0.1:1337').then(function() {
 
 # Links
 ### Client APIs
- + JavaScript [*wsps-jsclient*](https://github.com/vimac001/wsps-jsclient)
+ + JavaScript [*wsps-jsclient*](https://github.com/vimac001/wsps-jsclient) *updating to protocol v1.1*
 
 ### Server APIs
- + Java [wsps-jserver](https://github.com/vimac001/wsps-jserver) *in progress*
+ + Java [wsps-jserver](https://github.com/vimac001/wsps-jserver) *updating to protocol v1.1*
  + PHP *in progress*
- + .NET *in progress*
- + C++ *in progress*
+ + Node.js *cooming soon*
+ + .NET *cooming soon*
+ + C++ *cooming soon*
